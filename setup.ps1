@@ -3,65 +3,107 @@ $ErrorActionPreference = "Stop"
 
 # === CONFIGURATION ===
 $inputBucket = "reviews-bucket-input"
-$preprocessedBucket = "preprocessed-bucket"
+$cleanedBucket = "reviews-bucket-cleaned"
 $outputBucket = "reviews-bucket-output"
-$lambdaFolder = "lambdas/preprocessing"
-$packageFolder = "$lambdaFolder/package"
-$lambdaZip = "$lambdaFolder/lambda.zip"
+
+$preprocessName = "preprocessing"
+$profanityName = "profanity-check"
+
+$preprocessFolder = "lambdas/preprocessing"
+$profanityFolder = "lambdas/profanity-check"
+
+$preprocessPackage = "$preprocessFolder/package"
+$profanityPackage = "$profanityFolder/package"
+
+$preprocessZip = "$preprocessFolder/lambda.zip"
+$profanityZip = "$profanityFolder/lambda.zip"
 
 # === CREATE BUCKETS ===
 awslocal s3 mb "s3://$inputBucket"
+awslocal s3 mb "s3://$cleanedBucket"
 awslocal s3 mb "s3://$outputBucket"
 
-# === SET SSM PARAMETERS (overwrite if needed) ===
-awslocal ssm put-parameter --name "/localstack-thumbnail-app/buckets/input" --type String --value "$inputBucket" --overwrite
-awslocal ssm put-parameter --name "/localstack-thumbnail-app/buckets/output" --type String --value "$outputBucket" --overwrite
+# === SET SSM PARAMETERS ===
+awslocal ssm put-parameter --name "/dic/input_bucket" --type String --value "$inputBucket" --overwrite
+awslocal ssm put-parameter --name "/dic/cleaned_bucket" --type String --value "$cleanedBucket" --overwrite
+awslocal ssm put-parameter --name "/dic/output_bucket" --type String --value "$outputBucket" --overwrite
 
-# === PREPARE PACKAGE DIRECTORY ===
-if (-Not (Test-Path "$packageFolder\handler.py")) {
-    Write-Host "Dependencies not found. Installing..."
-    if (-Not (Test-Path $packageFolder)) {
-        New-Item -ItemType Directory -Path $packageFolder | Out-Null
+# === PACKAGE & DEPLOY: PREPROCESSING ===
+if (-Not (Test-Path "$preprocessPackage\handler.py")) {
+    Write-Host "Installing preprocessing dependencies..."
+    if (-Not (Test-Path $preprocessPackage)) {
+        New-Item -ItemType Directory -Path $preprocessPackage | Out-Null
     }
-} else {
-    Write-Host "Dependencies already installed. Skipping installation."
 }
-
-# Always copy latest handler + stopwords
-Copy-Item "$lambdaFolder\handler.py" $packageFolder -Force
-Copy-Item "$lambdaFolder\stopwords.txt" $packageFolder -Force
-
-# === CREATE ZIP FROM PACKAGE ===
-Push-Location $packageFolder
+Copy-Item "$preprocessFolder\handler.py" $preprocessPackage -Force
+Copy-Item "$preprocessFolder\stopwords.txt" $preprocessPackage -Force
+Push-Location $preprocessPackage
 Compress-Archive -Path * -DestinationPath ../lambda.zip -Force
 Pop-Location
 
-# === CREATE LAMBDA (will fail if it already exists, that's okay) ===
 awslocal lambda create-function `
-    --function-name "preprocessing" `
+    --function-name $preprocessName `
     --runtime python3.11 `
     --timeout 10 `
-    --zip-file "fileb://$lambdaZip" `
+    --zip-file "fileb://$preprocessZip" `
     --handler handler.handler `
     --role "arn:aws:iam::000000000000:role/lambda-role" `
-    --environment "Variables={STAGE=local}"
+    --environment "Variables={STAGE=local,CLEANED_BUCKET=$cleanedBucket}"
 
-# === ADD PERMISSION (fails if already exists, that's okay too) ===
+# Allow S3 to invoke
 awslocal lambda add-permission `
-    --function-name "preprocessing" `
+    --function-name $preprocessName `
     --action lambda:InvokeFunction `
     --statement-id s3invoke `
     --principal s3.amazonaws.com `
     --source-arn "arn:aws:s3:::$inputBucket"
 
-# === CONNECT S3 TRIGGER TO LAMBDA ===
-$lambdaArn = (awslocal lambda get-function --function-name "preprocessing" | ConvertFrom-Json).Configuration.FunctionArn
-
-$escapedJson = '{\"LambdaFunctionConfigurations\":[{\"LambdaFunctionArn\":\"' + $lambdaArn + '\",\"Events\":[\"s3:ObjectCreated:*\"]}]}'
+# Hook input bucket to preprocessing
+$preprocessArn = (awslocal lambda get-function --function-name $preprocessName | ConvertFrom-Json).Configuration.FunctionArn
+$preprocessConfig = '{\"LambdaFunctionConfigurations\":[{\"LambdaFunctionArn\":\"' + $preprocessArn + '\",\"Events\":[\"s3:ObjectCreated:*\"]}]}'
 
 awslocal s3api put-bucket-notification-configuration `
     --bucket $inputBucket `
-    --notification-configuration "$escapedJson"
+    --notification-configuration "$preprocessConfig"
 
-Write-Host "`n✅ Lambda and trigger setup complete!"
+# === PACKAGE & DEPLOY: PROFANITY-CHECK ===
+if (-Not (Test-Path "$profanityPackage\handler.py")) {
+    Write-Host "Installing profanity-check dependencies..."
+    if (-Not (Test-Path $profanityPackage)) {
+        New-Item -ItemType Directory -Path $profanityPackage | Out-Null
+    }
+}
+Copy-Item "$profanityFolder\handler.py" $profanityPackage -Force
+Copy-Item "$profanityFolder\bad-words.txt" $profanityPackage -Force
+Push-Location $profanityPackage
+Compress-Archive -Path * -DestinationPath ../lambda.zip -Force
+Pop-Location
+
+awslocal lambda create-function `
+    --function-name $profanityName `
+    --runtime python3.11 `
+    --timeout 10 `
+    --zip-file "fileb://$profanityZip" `
+    --handler handler.handler `
+    --role "arn:aws:iam::000000000000:role/lambda-role" `
+    --environment "Variables={STAGE=local,OUTPUT_BUCKET=$outputBucket}"
+
+# Allow S3 to invoke
+awslocal lambda add-permission `
+    --function-name $profanityName `
+    --action lambda:InvokeFunction `
+    --statement-id s3invoke2 `
+    --principal s3.amazonaws.com `
+    --source-arn "arn:aws:s3:::$cleanedBucket"
+
+# Hook cleaned bucket to profanity-check
+$profanityArn = (awslocal lambda get-function --function-name $profanityName | ConvertFrom-Json).Configuration.FunctionArn
+$profanityConfig = '{\"LambdaFunctionConfigurations\":[{\"LambdaFunctionArn\":\"' + $profanityArn + '\",\"Events\":[\"s3:ObjectCreated:*\"]}]}'
+
+awslocal s3api put-bucket-notification-configuration `
+    --bucket $cleanedBucket `
+    --notification-configuration "$profanityConfig"
+
+Write-Host "`nAll Lambdas and triggers are configured!"
+
 

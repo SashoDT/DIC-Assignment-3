@@ -33,7 +33,7 @@ def handler(event, context):
             json_data["summary"] = preprocess_text(json_data["summary"])
 
         # Save to output bucket (same filename)
-        output_bucket = os.getenv("OUTPUT_BUCKET", "reviews-bucket-output")
+        output_bucket = os.getenv("CLEANED_BUCKET", "reviews-bucket-cleaned")
         s3.put_object(Bucket=output_bucket, Key=key, Body=json.dumps(json_data).encode("utf-8"))
 
     return {"status": "OK"}
