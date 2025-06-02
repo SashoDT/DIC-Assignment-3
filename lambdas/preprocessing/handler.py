@@ -1,6 +1,14 @@
 import json
 import os
 import string
+import nltk
+from nltk.stem import WordNetLemmatizer
+
+nltk.data.path.append("/tmp")
+nltk.download("wordnet", download_dir="/tmp")
+nltk.download("omw-1.4", download_dir="/tmp")
+
+lemmatizer = WordNetLemmatizer()
 
 # Load stopwords from file once at startup
 with open(os.path.join(os.path.dirname(__file__), "stopwords.txt"), "r", encoding="utf-8") as f:
@@ -9,9 +17,12 @@ with open(os.path.join(os.path.dirname(__file__), "stopwords.txt"), "r", encodin
 def preprocess_text(text):
     # Lowercase and remove punctuation
     text = text.lower().translate(str.maketrans("", "", string.punctuation))
-    # Tokenize (simple whitespace split), remove stopwords
-    tokens = [word for word in text.split() if word not in STOPWORDS]
-    return " ".join(tokens)
+    # Tokenize
+    tokens = text.split()
+    # Remove stopwords and lemmatize
+    processed = [lemmatizer.lemmatize(word) for word in tokens if word not in STOPWORDS]
+    return processed
+
 
 def handler(event, context):
     for record in event["Records"]:
