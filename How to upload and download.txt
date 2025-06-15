@@ -1,0 +1,27 @@
+Upload the Reviews:
+awslocal s3 cp .\reviews_devset.json s3://reviews-bucket-input/reviews_devset.json
+
+Check if output created:
+awslocal s3 ls s3://reviews-bucket-processed
+
+Get the output:
+awslocal s3 cp s3://reviews-bucket-output/1rev.json 1rev.json
+
+{
+  "reviewerID": "A123XYZ",
+  "asin": "B00TEST123",
+  "reviewerName": "John Doe",
+  "helpful": [2, 3],
+  "reviewText": "This product is absolutely the worst damn thing I've ever bought. It was a total piece of crap — slow, ugly, and stupid. What a freaking mess.",
+  "summary": "Total crap!",
+  "overall": 1.0,
+  "unixReviewTime": 1700000000,
+  "reviewTime": "10 25, 2023",
+  "category": "Electronics"
+}
+
+What could be improved:
+- Currently, lemmatization assumes all are nouns and doesn't lemmatize verbs
+- Add delete commands at the start of ps1 to check and eventually delete package and lambda
+
+
