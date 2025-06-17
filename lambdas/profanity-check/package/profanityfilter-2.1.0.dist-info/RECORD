@@ -1,0 +1,16 @@
+../../bin/profanityfilter.exe,sha256=By16XBkqRtJH8guDQ3edA3aonGNk3lCUhMms0Ksg9vA,108407
+profanityfilter-2.1.0.dist-info/INSTALLER,sha256=zuuue4knoyJ-UwPPXg8fezS7VCrXJQrAP7zeNuwvFQg,4
+profanityfilter-2.1.0.dist-info/LICENSE,sha256=Dbrt29Uzk-zCfXuDLF63hoB4ZKE2xH3tP1qB9IFLWbM,1464
+profanityfilter-2.1.0.dist-info/METADATA,sha256=C5BcZWmZh83jTt6CsqsRh6Xke0Wt1pOk57qoWLqgHdI,3062
+profanityfilter-2.1.0.dist-info/RECORD,,
+profanityfilter-2.1.0.dist-info/REQUESTED,sha256=47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU,0
+profanityfilter-2.1.0.dist-info/WHEEL,sha256=pxeNX5JdtCe58PUSYP9upmc7jdRPgvT0Gm9kb1SHlVw,109
+profanityfilter-2.1.0.dist-info/entry_points.txt,sha256=bBilmsPqMyihRpUFHE21LTK6Ed_Ai5qIncTgHH0oqUA,57
+profanityfilter-2.1.0.dist-info/top_level.txt,sha256=Y_B8XHcqQNCvxm-Nh9wexQAc4jApU1ejTUTsv5q3w1g,16
+profanityfilter/__init__.py,sha256=3XYQsPnBiW1nj9vjT7DRPZombQqorOXQnmDsnk6Dg58,129
+profanityfilter/__pycache__/__init__.cpython-311.pyc,,
+profanityfilter/__pycache__/console.cpython-311.pyc,,
+profanityfilter/__pycache__/profanityfilter.cpython-311.pyc,,
+profanityfilter/console.py,sha256=85Te1B8AXbqBDEFYAlQ-7g1QxE7znYXRFvOp5-o33xE,1404
+profanityfilter/data/badwords.txt,sha256=n-WGbK_T1y2LuyCQQEzQqgYNLwui1X3xX6mHompqIbU,2894
+profanityfilter/profanityfilter.py,sha256=5Cc5IeQzzCjM3y_2Vza-cwcZ5f4Vf98pA0yOv5wFdiU,5063

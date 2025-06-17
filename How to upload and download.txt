@@ -6,6 +6,7 @@ awslocal s3 ls s3://reviews-bucket-processed
 
 Get the output:
 awslocal s3 cp s3://reviews-bucket-output/1rev.json 1rev.json
+(Get all the files: awslocal s3 cp s3://reviews-bucket-output .\out --recursive ) 
 
 {
   "reviewerID": "A123XYZ",

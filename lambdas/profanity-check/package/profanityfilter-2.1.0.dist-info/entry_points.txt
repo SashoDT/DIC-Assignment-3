@@ -1,0 +1,2 @@
+[console_scripts]
+profanityfilter = profanityfilter:main

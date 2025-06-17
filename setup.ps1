@@ -57,7 +57,7 @@ Pop-Location
 awslocal lambda create-function `
     --function-name $preprocessName `
     --runtime python3.11 `
-    --timeout 10 `
+    --timeout 120 `
     --zip-file "fileb://$preprocessZip" `
     --handler handler.handler `
     --role "arn:aws:iam::000000000000:role/lambda-role" `
@@ -85,9 +85,11 @@ if (-Not (Test-Path "$profanityPackage\handler.py")) {
     if (-Not (Test-Path $profanityPackage)) {
         New-Item -ItemType Directory -Path $profanityPackage | Out-Null
     }
+    pip install -r "$profanityFolder/requirements.txt" -t $profanityPackage --upgrade 
 }
 Copy-Item "$profanityFolder\handler.py" $profanityPackage -Force
 Copy-Item "$profanityFolder\bad-words.txt" $profanityPackage -Force
+Copy-Item "$profanityFolder\badwords_profanityfilter.txt" $profanityPackage -Force
 Push-Location $profanityPackage
 Compress-Archive -Path * -DestinationPath ../lambda.zip -Force
 Pop-Location
@@ -95,7 +97,8 @@ Pop-Location
 awslocal lambda create-function `
     --function-name $profanityName `
     --runtime python3.11 `
-    --timeout 10 `
+    --memory-size 512 `
+    --timeout 120 `
     --zip-file "fileb://$profanityZip" `
     --handler handler.handler `
     --role "arn:aws:iam::000000000000:role/lambda-role" `
@@ -134,7 +137,7 @@ Pop-Location
 awslocal lambda create-function `
     --function-name $sentimentName `
     --runtime python3.11 `
-    --timeout 10 `
+    --timeout 120 `
     --zip-file "fileb://$sentimentZip" `
     --handler handler.handler `
     --role "arn:aws:iam::000000000000:role/lambda-role" `
