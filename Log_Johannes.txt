@@ -1,0 +1,242 @@
+###################################################################################
+PART 1: Set-up and Tutorial 
+###################################################################################
+
+Set-Up: 
+- Docker installed 
+- Localstack: 
+	- Download, Unzipped, ran it, put it into a folder 
+	- To use commands on it, cd folder, then for example ".\localstack --version" 
+- Followed instructions for setting up python environment 
+- Remember this for activating environment: 
+	# Windows in cmd.exe
+	.venv\Scripts\activate.bat
+	# Windows in PowerShell
+	.venv\Scripts\Activate.ps1
+- Followed instructions for jq, zip/tar (both already on windows) and curl (also on Windows already)
+- Install and start Localstack: 
+	- pip install -r requirements.txt 
+	- LOCALSTACK_ACTIVATE_PRO=0 LOCALSTACK_DEBUG=1 localstack start
+	  (This is Linux way of running this, for Windows it's: 
+	   $env:LOCALSTACK_ACTIVATE_PRO="0"; $env:LOCALSTACK_DEBUG="1"; localstack start 
+	  To remove the variables if needed: 
+	   Remove-Item Env:LOCALSTACK_ACTIVATE_PRO
+	   Remove-Item Env:LOCALSTACK_DEBUG
+	  )
+
+
+
+Run (from beginning and specific to my system and PowerShell):  
+- cd C:\Data_Science\DIC\assignment_3 
+- .venv\Scripts\Activate.ps1 
++ For SOME REASON both my virtual environment and base environment are now activated so: 
+  - conda deactivate 
+- cd C:\Data_Science\DIC\assignment_3\tutorial 
+- $env:LOCALSTACK_ACTIVATE_PRO="0"; $env:LOCALSTACK_DEBUG="1"; localstack start 
+
++ If you want to open the website: Go into the folder in tutorial\website and open the html file in a browser 
+
+--- 1. Versuch (Bash commands in Powershell übersetzen) ---
++ Open a new PowerShell because in one of them the localstack is running, repeat all steps before starting localstack again 
++ input all the commands in the tutorial 
+  + First command already did not work, PowerShell cannot do anything with awslocal, try installing with  
+  - pip install awscli-local 
+  - pip install awscli 
+  + awscli was the culprit, thank you so much for including awscli-local in you requirements but not awscli !? 
++ Now that this is fixed try to input all commands again 
++ Be happy that it FINALLY WORKS
++ Be mad again, that the commands are for Linux; For create the lambdas: 
+
+#-----------------------------------------------------------------------
+# Wechsle in das Verzeichnis
+Set-Location .\lambdas\presign
+
+# Lösche die ZIP-Datei, falls vorhanden
+Remove-Item -Path .\lambda.zip -ErrorAction SilentlyContinue
+
+# Erstelle die ZIP-Datei mit handler.py
+Compress-Archive -Path .\handler.py -DestinationPath .\lambda.zip -Force
+
+# Wechsle zurück zum Projektverzeichnis (falls nötig)
+Set-Location ../..
+
+# Erstelle die Lambda-Funktion in LocalStack
+awslocal lambda create-function `
+ --function-name presign `
+ --runtime python3.11 `
+ --timeout 10 `
+ --zip-file fileb://lambdas/presign/lambda.zip `
+ --handler handler.handler `
+ --role arn:aws:iam::000000000000:role/lambda-role `
+ --environment Variables="{STAGE=local}"
+#----------------------------------------------------------------------
+
+#----------------------------------------------------------------------
+awslocal lambda create-function-url-config `
+ --function-name presign `
+ --auth-type NONE
+#----------------------------------------------------------------------
+
+Fazit: Zu aufwendig das alles zu übersetzen 
+
+2. Try (Localstack Exec in Powershell): 
++ Start Localstack as before
++ New Powershell window: docker exec -it localstack-main bash 
++ Now it runs 
++ Nvm, wrong place to run this  
+
+3. Try (Bash in Powershell): 
++ Start Localstack 
++ New Powershell, same as in Localstack but without starting it (so only up to cd Tutorial folder) 
+- bash 
+- Failed right at the first Tutorial command, Windows/WSL-Compatibility-problem (Python in Windows but not in the virtual computer) 
+- Try to set up Python Env in Bash (continuation of before): 
+  + Install Python in Bash (just in case): 
+    - sudo apt update 
+    - sudo apt install python3 python3-venv python3-pip zip unzip -y 
+  - cd /mnt/c/Data_Science/DIC/assignment_3
+  - python3.11 -m venv .venv-linux 
+  - source .venv-linux/bin/activate
+  - pip install -r /mnt/c/Data_Science/DIC/assignment_3/requirements.txt 
+  + And of course also: 
+    - pip install awscli localstack awscli-local
+  - cd /mnt/c/Data_Science/DIC/assignment_3/tutorial
+  + Now following Tutorial again
+  + No difference in commands of Linux to Windows in Bash (e.g. zip und tar) 
+  + Another Error with jq not found: 
+    - sudo apt  install jq
+  + Test failed, so try everything again ^^ 
+
+
+Summary of how to run this (without setting up the environments etc.):
+Localstack (new powershell window):  
+  - cd C:\Data_Science\DIC\assignment_3 
+  - .venv\Scripts\Activate.ps1 
+  + For SOME REASON both my virtual environment and base environment are now activated so: 
+    - conda deactivate 
+  - cd C:\Data_Science\DIC\assignment_3\tutorial 
+  - $env:LOCALSTACK_ACTIVATE_PRO="0"; $env:LOCALSTACK_DEBUG="1"; localstack start 
+Rest (In a new Powershell window): 
+  - bash 
+  - cd /mnt/c/Data_Science/DIC/assignment_3
+  - source .venv-linux/bin/activate
+  - cd /mnt/c/Data_Science/DIC/assignment_3/tutorial
+  + optional: 
+    - alias python=python3.11
+  + Follow tutorial  
+  + Tipp: Paste\Run commands without \ sepparate from each other 
+  + TEST SUCCESSFUL 
+
+
+
+Appendix (Some commands that are difficult to copy): 
+ 
+( cd lambdas/resize;  rm -rf package lambda.zip;  mkdir package;  pip install -r requirements.txt -t package --platform manylinux2014_x86_64 --only-binary=:all:;  zip lambda.zip handler.py;  cd package;  zip -r ../lambda.zip *; )
+awslocal lambda create-function \
+ --function-name resize \
+ --runtime python3.11 \
+ --timeout 10 \
+ --zip-file fileb://lambdas/resize/lambda.zip \
+ --handler handler.handler \
+ --role arn:aws:iam::000000000000:role/lambda-role \
+ --environment Variables="{STAGE=local}"
+
+awslocal s3api put-bucket-notification-configuration \
+ --bucket localstack-thumbnails-app-images \
+ --notification-configuration "{\"LambdaFunctionConfigurations\": [{\"LambdaFunctionArn\": \"$(awslocal lambda get-function --function-name resize | jq -r .Configuration.FunctionArn)\", \"Events\": [\"s3:ObjectCreated:*\"]}]}"
+
+
+
+################################################################################
+PART 2: Working on the actual assignment (continuing the work of my predecessor) 
+################################################################################
+
+# Run Localstack as before: 
+- C:\Data_Science\DIC\assignment_3\.venv\Scripts\Activate.ps1 
++ For SOME REASON both my virtual environment and base environment are now activated so: 
+  - conda deactivate 
+- cd C:\Data_Science\DIC\assignment_3\tutorial 
+- $env:LOCALSTACK_ACTIVATE_PRO="0"; $env:LOCALSTACK_DEBUG="1"; localstack start 
+
+# Run Setup: 
+- C:\Data_Science\DIC\assignment_3\.venv\Scripts\Activate.ps1 
++ For SOME REASON both my virtual environment and base environment are now activated so: 
+  - conda deactivate 
+- cd C:\Data_Science\DIC\assignment_3\DIC-Assignment-3
+- .\setup.ps1 
+
+Upload the Reviews:
+awslocal s3 cp .\reviews_devset.json s3://reviews-bucket-input/reviews_devset.json
+
+Check if output created:
+awslocal s3 ls s3://reviews-bucket-output
+
+Get the output:
+mkdir out
+awslocal s3 cp s3://reviews-bucket-output .\out --recursive 
+
+# Change of processing of json objects 
+
+Managed to change handlers to handle json files with multiple json objects/lines by adding for-loop over raw input. 
+Additionally, I changed the timeout of the lambda functions from 10 to 120s because the need about 21 seconds or less per function for the development data set. I hope 120s is enough for larger files, should they test it on them. 
+
+
+
+# Edit profanity flter 
+
+Next I will try to change the profanity filter to use the python library instead of the txt file. 
+- Problem: package takes much longer to run than txt file 
+- Conclusion to this: Will remain using txt file for profanity checking, since this method only takes about 2 seconds for the whole devset at 512 mb usage, while the python package "profanityfilter" needs more than 360 seconds (last timeout bound, unclear how much more than this it uses) to run while using 1024 mb of memory. For just 2 json objects "profanityfilter" needed 140 ms to run, so considering ressource planning on the localstack end, it could end up with about (optimistical approximation of 14ms per json object) 14*142,800,000*0.001 (time to run * reviews * devset review contains only 0.1 percent of overall reviews) = 1,999,200 ms ~ 33 min, which is way too long to run, especially in comparison to the other method. 
+Another experiment with 271 json objects (lines with {...}) ended up taking 44905.83 ms, so about 160ms per json object. Considering this our approximation before is very optimistic, since there seems to be no planning time to consider. This strengthens our argument of using .txt-file profanity checking. 
+
+- Further update to that: Found badwords-file of package profanity-filter. Our lambda handler will read this in additionally and combine it with our old badwords-file. This is beneficial because each of the badword-files have about 400 curse words but only about 50 of them match which means that we can drastically improve the profanity search. 
+
+
+
+# Added variable "overall" to sentiment analysis 
+
+Then changed sentiment analysis to also take "overall" into consideration since that is also asked in the assignment. "overall" is the rating the reviewer gives the product with a range of {1.0, 2.0, 3.0, 4.0, 5.0}. This means that we can take 3 as a neutral score and everything belor or above as negative or positive sentiment. I am not sure how to include those ratings to our text sentiment score, but I guess I will scale the range to match with the text sentiment score range and add them together. The scaling formula is then $("overall"-3)/2$. 
+For example a review with text sentiment score of 0.1 and rating 3 get's a total sentiment score of 0.1+0=0.1 > 0.05 and therefore a positive sentiment score. If the rating was 2 for whatever reason, this would be 0.1+(-0.5)=-0.4 < 0.05 and therefore a negative sentiment score. As we can see the overall rating can shift the sentiment drastically since its range very different with only 5 integers. Although, ratings probably should have the highest weight when explaining the reviewers sentiment to the product, one could also introduce weights to calculate the overall sentiment score but this exceeds our expertise. 
+Here is an actual example where it was good to include the overall rating: 
+- Review raw: 
+  {"reviewerID": "A32IARZE1JG12S", "asin": "B0000BYCP7", "reviewerName": "Jim Oberlin", "helpful": [0, 0], "reviewText": "salt would stick under wheel not good for salt when you spin the salt would lodge under the wheel thanks", "overall": 1.0, "summary": "not good for salt", "unixReviewTime": 1390176000, "reviewTime": "01 20, 2014", "category": "Patio_Lawn_and_Garde"}
+
+- Review after analysis without rating: 
+  {"reviewerID": "A32IARZE1JG12S", "asin": "B0000BYCP7", "reviewerName": "Jim Oberlin", "helpful": [0, 0], "reviewText": ["salt", "stick", "wheel", "good", "salt", "spin", "salt", "lodge", "wheel"], "overall": 1.0, "summary": ["good", "salt"], "unixReviewTime": 1390176000, "reviewTime": "01 20, 2014", "category": "Patio_Lawn_and_Garde", "has_profanity": false, "sentiment": "positive"}
+
+- Review after analysis with rating: 
+  {"reviewerID": "A32IARZE1JG12S", "asin": "B0000BYCP7", "reviewerName": "Jim Oberlin", "helpful": [0, 0], "reviewText": ["salt", "stick", "wheel", "good", "salt", "spin", "salt", "lodge", "wheel"], "overall": 1.0, "summary": ["good", "salt"], "unixReviewTime": 1390176000, "reviewTime": "01 20, 2014", "category": "Patio_Lawn_and_Garde", "has_profanity": false, "sentiment": "negative"}
+
+It seems like the "not" got ignored in the tokenization and the "good" remained. 
+
+
+
+# Add Banning system 
+
+The next task is to implement a banning system where reviewers with more than 3 reviews containing profanity get flagged as banned. This can be done by using a DynamoDB table: 
+https://docs.aws.amazon.com/code-library/latest/ug/python_3_dynamodb_code_examples.html
+https://docs.localstack.cloud/user-guide/aws/dynamodb/
+https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/dynamodb/client/update_item.html 
+That was annoying af, since I had to figure it out just by doing a lot of research and especially because of one bug that I couldn't spot and figure out for > 4 hours: 
+"For some dumb reason, DynamoDB returns Decimal types for numbers, 
+ so we need to convert them to JSON-compatible types because for 
+ some dumb reason JSONEncoder does not support those dumb Decimal types."
+
+On a sidenote, when running the inoput devset 2 times, you will get much more banned Users. This is due to the fact that the dynamoDB table still exists from the 1st iteration, therefore it will "remember" the users and their previous offenses and add the 2nd iteration of offenses to the old table. Call this a feature if you want - you can upload multiple of these json files and and localstack will remember how often a user already used profanity in their reviews. This table of course will be deleted when restarting localstack. 
+
+
+
+# Counting reviews 
+
+For my last magic trick, I will try to count together the following things: 
+- The number of positive, neutral, and negative reviews present in the reviews_devset.json;
+- The number of reviews that didn't pass the profanity check;
+- Users resulting in a ban, if any.
+
+Realistically, this could probably be done locally, not on AWS since that would just cost more money. For the exercise sake, I will do this in a lambda handler. 
+
+Update: There was no need for a new lambda handler. The count of reviews per sentiment and profanity is done inside of the sentiment lambda. I solved this by using another DynamoDB table which counts the amount of reviews per sentiment. The reason why we use DynamoDB additionally to a simple result counting with a python set, is that DynamoDB remembers the counted sentiments in case multiple files of data get uploaded. Additionally, we read in the DynamoDB table of the user bans and return all this information to a new file inside of the output bucket. 
+
+
+
+

@@ -1,0 +1,10 @@
+{
+    "total_profane_reviews": 3989,
+    "total_banned_users": 2,
+    "sentiment_counts": {
+        "positive": 67214,
+        "neutral": 1080,
+        "negative": 10535
+    },
+    "total_reviews_processed": 78829
+}

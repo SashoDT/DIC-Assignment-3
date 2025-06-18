@@ -2,14 +2,19 @@ import os
 import json
 import boto3
 
-# Get the cleaned and output bucket names from SSM
+# Set up AWS clients with LocalStack endpoint
 endpoint_url = os.environ.get("AWS_ENDPOINT_URL") or ("http://" + os.environ.get("LOCALSTACK_HOSTNAME", "localhost") + ":4566")
-
 s3 = boto3.client("s3", endpoint_url=endpoint_url)
 ssm = boto3.client("ssm", endpoint_url=endpoint_url)
 
-cleaned_bucket = ssm.get_parameter(Name="/dic/cleaned_bucket")["Parameter"]["Value"]
+# Get the DynamoDB table for ban status
+dynamodb = boto3.resource('dynamodb', endpoint_url=endpoint_url)
+table_name = os.environ.get("BAN_TABLE", "ban_table")
+table = dynamodb.Table(table_name)
+
+# Get the bucket names from SSM parameters for result output
 presentiment_bucket = ssm.get_parameter(Name="/dic/presentiment_bucket")["Parameter"]["Value"]
+output_bucket = ssm.get_parameter(Name="/dic/output_bucket")["Parameter"]["Value"]
 
 # Load bad words from file
 with open("bad-words.txt", "r") as f:
@@ -45,10 +50,27 @@ def handler(event, context):
             try:
                 review = json.loads(line)
                 flagged = False
+                reviewer_id = review.get('reviewerID', 'unknown')
                 for field in ["reviewText", "summary"]: 
                     tokens = review.get(field, [])
                     if isinstance(tokens, list) and contains_profanity(tokens):
                         flagged = True
+                        # Logic for updating the DynamoDB table 
+                        resp = table.update_item(
+                            Key={"reviewerID": reviewer_id},
+                            UpdateExpression="ADD profane_count :one SET banned = if_not_exists(banned, :false)",
+                            ExpressionAttributeValues={":one": 1,":false": False},
+                            ReturnValues="UPDATED_NEW"
+                        )
+                        # Logic for user banning
+                        profane_count = int(resp["Attributes"].get("profane_count", 0))
+                        if profane_count > 3 and not resp["Attributes"].get("banned", False):
+                            print(f"Banning user {reviewer_id} for excessive profanity.")
+                            table.update_item(
+                                Key={"reviewerID": reviewer_id},
+                                UpdateExpression="SET banned = :true",
+                                ExpressionAttributeValues={":true": True}
+                            )
                         break
                 review["has_profanity"] = flagged
                 processed_lines.append(json.dumps(review))
@@ -60,6 +82,32 @@ def handler(event, context):
             Bucket=presentiment_bucket,
             Key=key,
             Body="\n".join(processed_lines).encode("utf-8") # Join all lines back together 
+        )
+
+        #  Fetch banned users from DynamoDB 
+        print("Fetching banned users from DynamoDB...")
+        banned_users = table.scan(
+            FilterExpression="banned = :true",
+            ExpressionAttributeValues={":true": True}
+        ).get("Items", [])
+        
+        # For some dumb reason, DynamoDB returns Decimal types for numbers, 
+        # so we need to convert them to JSON-compatible types because for 
+        # some dumb reason JSONEncoder does not support those dumb Decimal types.
+        from decimal import Decimal
+        class DecimalEncoder(json.JSONEncoder):
+            def default(self, obj):
+                if isinstance(obj, Decimal):
+                    # Convert to int if it's a whole number, else float
+                    return int(obj) if obj % 1 == 0 else float(obj)
+                return super(DecimalEncoder, self).default(obj)
+
+        banned_json = "\n".join(json.dumps(user, cls=DecimalEncoder) for user in banned_users).encode("utf-8")
+        s3.put_object(
+            Bucket=output_bucket,
+            Key="banned-users.json",
+            Body=banned_json,
+            ContentType="application/json"
         )
 
     return {"status": "OK"}

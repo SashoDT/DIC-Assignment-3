@@ -6,6 +6,8 @@ $inputBucket = "reviews-bucket-input"
 $cleanedBucket = "reviews-bucket-cleaned"
 $presentimentBucket = "reviews-bucket-presentiment"
 $outputBucket = "reviews-bucket-output"
+$banTable = "ban-table"
+$sentimentTable = "sentiment-table" 
 
 $preprocessName = "preprocessing"
 $profanityName = "profanity-check"
@@ -29,11 +31,27 @@ awslocal s3 mb "s3://$cleanedBucket"
 awslocal s3 mb "s3://$presentimentBucket"
 awslocal s3 mb "s3://$outputBucket"
 
+# === CREATE DYNAMODB TABLE FOR BAN STATUS ===
+awslocal dynamodb create-table `
+    --table-name $banTable `
+    --key-schema AttributeName=reviewerID,KeyType=HASH `
+    --attribute-definitions AttributeName=reviewerID,AttributeType=S `
+    --billing-mode PAY_PER_REQUEST 
+
+# === CREATE DYNAMODB TABLE FOR SENTIMENT COUNTING ===
+awslocal dynamodb create-table `
+    --table-name $sentimentTable `
+    --key-schema AttributeName=sentiment,KeyType=HASH `
+    --attribute-definitions AttributeName=sentiment,AttributeType=S `
+    --billing-mode PAY_PER_REQUEST 
+
 # === SET SSM PARAMETERS ===
 awslocal ssm put-parameter --name "/dic/input_bucket" --type String --value "$inputBucket" --overwrite
 awslocal ssm put-parameter --name "/dic/cleaned_bucket" --type String --value "$cleanedBucket" --overwrite
 awslocal ssm put-parameter --name "/dic/presentiment_bucket" --type String --value "$presentimentBucket" --overwrite
 awslocal ssm put-parameter --name "/dic/output_bucket" --type String --value "$outputBucket" --overwrite
+awslocal ssm put-parameter --name "/dic/ban_table" --type String --value "$banTable" --overwrite
+awslocal ssm put-parameter --name "/dic/sentiment_table" --type String --value "$sentimentTable" --overwrite
 
 # === PACKAGE & DEPLOY: PREPROCESSING ===
 if (-Not (Test-Path "$preprocessPackage\handler.py")) {
@@ -98,11 +116,11 @@ awslocal lambda create-function `
     --function-name $profanityName `
     --runtime python3.11 `
     --memory-size 512 `
-    --timeout 120 `
+    --timeout 180 `
     --zip-file "fileb://$profanityZip" `
     --handler handler.handler `
     --role "arn:aws:iam::000000000000:role/lambda-role" `
-    --environment "Variables={STAGE=local,PRESENTIMENT_BUCKET=$presentimentBucket}"
+    --environment "Variables={STAGE=local,PRESENTIMENT_BUCKET=$presentimentBucket,BAN_TABLE=$banTable,OUTPUT_BUCKET=$outputBucket}"
 
 # Allow S3 to invoke
 awslocal lambda add-permission `
@@ -137,11 +155,12 @@ Pop-Location
 awslocal lambda create-function `
     --function-name $sentimentName `
     --runtime python3.11 `
-    --timeout 120 `
+    --timeout 240 `
+    --memory-size 1024 `
     --zip-file "fileb://$sentimentZip" `
     --handler handler.handler `
     --role "arn:aws:iam::000000000000:role/lambda-role" `
-    --environment "Variables={STAGE=local,OUTPUT_BUCKET=$outputBucket}"
+    --environment "Variables={STAGE=local,OUTPUT_BUCKET=$outputBucket,SENTIMENT_TABLE=$sentimentTable,BAN_TABLE=$banTable}"
 
 awslocal lambda add-permission `
     --function-name $sentimentName `
@@ -156,6 +175,11 @@ $sentimentConfig = '{\"LambdaFunctionConfigurations\":[{\"LambdaFunctionArn\":\"
 awslocal s3api put-bucket-notification-configuration `
     --bucket $presentimentBucket `
     --notification-configuration "$sentimentConfig"
+
+# === Create Output Folder ===
+if (-Not (Test-Path out)) {
+        New-Item -ItemType Directory -Path out | Out-Null
+    }
 
 Write-Host "`nAll Lambdas and triggers are configured!"
 
