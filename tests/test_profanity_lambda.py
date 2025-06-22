@@ -30,7 +30,7 @@ s3 = boto3.client("s3", endpoint_url=os.environ["AWS_ENDPOINT_URL"])
 dynamodb = boto3.resource("dynamodb", endpoint_url=os.environ["AWS_ENDPOINT_URL"])
 ssm = boto3.client("ssm", endpoint_url=os.environ["AWS_ENDPOINT_URL"])
 
-# mock data
+# Sample Data
 sample_review = {
     "reviewerID": "TESTUSER1",
     "reviewText": ["this", "product", "is", "total", "crap"],
@@ -115,7 +115,7 @@ class TestProfanityHandler(unittest.TestCase):
         self.assertFalse(contains_profanity(clean_review["summary"]))
 
     def test_handler_profanity_flag_and_ban_logic(self):
-        """Test handler flags profanity and bans after 4 offenses"""
+        """Test handler flags profanity and bans after 4 offenses."""
         table = dynamodb.Table(self.ban_table)
 
         for i in range(4):
@@ -144,7 +144,7 @@ class TestProfanityHandler(unittest.TestCase):
         self.assertTrue(user.get("banned", False))
 
     def test_handler_does_not_flag_clean_reviews(self):
-        """Clean reviews should not be flagged"""
+        """Checks that clean reviews should not be flagged."""
         key = "clean-review.json"
         content = json.dumps(clean_review)
         s3.put_object(Bucket=self.input_bucket, Key=key, Body=content)
@@ -157,7 +157,7 @@ class TestProfanityHandler(unittest.TestCase):
 
         profanity_handler(event, None)
 
-        result = wait_for_s3_key(s3, self.presentiment_bucket, key)
+        result = wait_for_s3_key(s3, self.presentiment_bucket, key, timeout=10)
         review_data = json.loads(result["Body"].read().decode("utf-8"))
 
         print("Clean Review Processed:", review_data)
