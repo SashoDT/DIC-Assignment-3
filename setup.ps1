@@ -10,12 +10,12 @@ $banTable = "ban-table"
 $sentimentTable = "sentiment-table" 
 
 $preprocessName = "preprocessing"
-$profanityName = "profanity-check"
-$sentimentName = "sentiment-analysis"
+$profanityName = "profanity_check"
+$sentimentName = "sentiment_analysis"
 
 $preprocessFolder = "lambdas/preprocessing"
-$profanityFolder = "lambdas/profanity-check"
-$sentimentFolder = "lambdas/sentiment-analysis"
+$profanityFolder = "lambdas/profanity_check"
+$sentimentFolder = "lambdas/sentiment_analysis"
 
 $preprocessPackage = "$preprocessFolder/package"
 $profanityPackage = "$profanityFolder/package"
@@ -99,7 +99,7 @@ awslocal s3api put-bucket-notification-configuration `
 
 # === PACKAGE & DEPLOY: PROFANITY-CHECK ===
 if (-Not (Test-Path "$profanityPackage\handler.py")) {
-    Write-Host "Installing profanity-check dependencies..."
+    Write-Host "Installing profanity_check dependencies..."
     if (-Not (Test-Path $profanityPackage)) {
         New-Item -ItemType Directory -Path $profanityPackage | Out-Null
     }
@@ -140,7 +140,7 @@ awslocal s3api put-bucket-notification-configuration `
 
 # === PACKAGE & DEPLOY: SENTIMENT ANALYSIS ===
 if (-Not (Test-Path "$sentimentPackage\handler.py")) {
-    Write-Host "Installing sentiment-analysis dependencies..."
+    Write-Host "Installing sentiment_analysis dependencies..."
     if (-Not (Test-Path $sentimentPackage)) {
         New-Item -ItemType Directory -Path $sentimentPackage | Out-Null
     }
