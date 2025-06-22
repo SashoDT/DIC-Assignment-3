@@ -1,5 +1,8 @@
 I changed the folder names to sentiment_analysis and profanity_check. Then I also changed the imports in the setup file.
 
+previously pytest tests worked for me
+for other people $env:PYTHONPATH = "."; pytest tests works
+
 
 # log to run the tests #
 
