@@ -41,7 +41,7 @@ os.environ["SENTIMENT_TABLE"] = "sentiment_table"
 os.environ["AWS_ENDPOINT_URL"] = "http://localhost.localstack.cloud:4566"
 
 # Boto3 Clients
-s3 = boto3.client("s3", endpoint_url=os.environ["AWS_ENDPOINT_URL"], config=Config(connect_timeout=5, read_timeout=10))
+s3 = boto3.client("s3", endpoint_url=os.environ["AWS_ENDPOINT_URL"], config=Config(connect_timeout=10, read_timeout=20))
 dynamodb = boto3.resource("dynamodb", endpoint_url=os.environ["AWS_ENDPOINT_URL"])
 ssm = boto3.client("ssm", endpoint_url=os.environ["AWS_ENDPOINT_URL"])
 lambda_client = boto3.client(

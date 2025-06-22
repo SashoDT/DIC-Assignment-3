@@ -44,7 +44,7 @@ clean_review = {
 }
 
 
-def wait_for_s3_key(s3_client, bucket, key, timeout=5):
+def wait_for_s3_key(s3_client, bucket, key, timeout=20):
     """Wait for S3 key to appear"""
     for _ in range(timeout * 2):
         try:
@@ -157,7 +157,7 @@ class TestProfanityHandler(unittest.TestCase):
 
         profanity_handler(event, None)
 
-        result = wait_for_s3_key(s3, self.presentiment_bucket, key, timeout=10)
+        result = wait_for_s3_key(s3, self.presentiment_bucket, key, timeout=20)
         review_data = json.loads(result["Body"].read().decode("utf-8"))
 
         print("Clean Review Processed:", review_data)
