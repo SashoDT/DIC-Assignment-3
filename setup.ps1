@@ -115,7 +115,7 @@ Pop-Location
 awslocal lambda create-function `
     --function-name $profanityName `
     --runtime python3.11 `
-    --memory-size 512 `
+    --memory-size 1024 `
     --timeout 180 `
     --zip-file "fileb://$profanityZip" `
     --handler handler.handler `

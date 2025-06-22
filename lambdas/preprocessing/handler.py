@@ -17,10 +17,11 @@ with open(os.path.join(os.path.dirname(__file__), "stopwords.txt"), "r", encodin
 def preprocess_text(text):
     # Lowercase and remove punctuation
     text = text.lower().translate(str.maketrans("", "", string.punctuation))
+    if not text.isascii(): print("Non ASCII character detected")
     # Tokenize
     tokens = text.split()
     # Remove stopwords and lemmatize
-    processed = [lemmatizer.lemmatize(word) for word in tokens if word not in STOPWORDS]
+    processed = [lemmatizer.lemmatize(word) for word in tokens if word not in STOPWORDS and word.isascii()]
     return processed
 
 
@@ -50,7 +51,7 @@ def handler(event, context):
                 processed_lines.append(json.dumps(json_data))
             except json.JSONDecodeError: # Just in case 
                 continue  # Skip bad lines
-
+        
         # Save to output bucket (same filename)
         output_bucket = os.getenv("CLEANED_BUCKET", "reviews-bucket-cleaned")
         s3.put_object(Bucket=output_bucket, 

@@ -2,6 +2,10 @@ import os
 import json
 import boto3
 
+BAD_WORDS_FILE_1 = os.path.join(os.path.dirname(__file__), "bad-words.txt")
+BAD_WORDS_FILE_2 = os.path.join(os.path.dirname(__file__), "badwords_profanityfilter.txt")
+
+
 # Set up AWS clients with LocalStack endpoint
 endpoint_url = os.environ.get("AWS_ENDPOINT_URL") or ("http://" + os.environ.get("LOCALSTACK_HOSTNAME", "localhost") + ":4566")
 s3 = boto3.client("s3", endpoint_url=endpoint_url)
@@ -17,11 +21,11 @@ presentiment_bucket = ssm.get_parameter(Name="/dic/presentiment_bucket")["Parame
 output_bucket = ssm.get_parameter(Name="/dic/output_bucket")["Parameter"]["Value"]
 
 # Load bad words from file
-with open("bad-words.txt", "r") as f:
+with open(BAD_WORDS_FILE_1, "r", encoding="utf-8") as f:
     bad_words1 = set(line.strip().lower() for line in f if line.strip())
 
 # Load bad words from profanityfilter package: 
-with open("badwords_profanityfilter.txt", "r") as f:
+with open(BAD_WORDS_FILE_2, "r", encoding="utf-8") as f:
     bad_words2 = set(line.strip().lower() for line in f if line.strip())
 
 bad_words = bad_words1.union(bad_words2)
@@ -109,6 +113,7 @@ def handler(event, context):
             Body=banned_json,
             ContentType="application/json"
         )
+        print(f"Wrote banned-users.json with {len(banned_users)} users.")
 
     return {"status": "OK"}
 
