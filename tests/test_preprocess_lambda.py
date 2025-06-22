@@ -64,7 +64,6 @@ sample_data = (
 
 @pytest.fixture(autouse=True)
 def wait_for_lambda_ready():
-    # Wait until your Lambda is active and ready in Localstack
     lambda_client.get_waiter("function_active").wait(FunctionName="preprocessing")
 
 class TestPreprocessText(unittest.TestCase):

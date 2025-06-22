@@ -30,7 +30,7 @@ s3 = boto3.client("s3", endpoint_url=os.environ["AWS_ENDPOINT_URL"])
 dynamodb = boto3.resource("dynamodb", endpoint_url=os.environ["AWS_ENDPOINT_URL"])
 ssm = boto3.client("ssm", endpoint_url=os.environ["AWS_ENDPOINT_URL"])
 
-# Sample Data
+# mock data
 sample_review = {
     "reviewerID": "TESTUSER1",
     "reviewText": ["this", "product", "is", "total", "crap"],
