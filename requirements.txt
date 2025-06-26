@@ -10,3 +10,7 @@ black==25.1.0
 pytest==8.3.5
 awscli-local==0.22.0
 localstack==4.4.0
+profanityfilter
+nltk 
+regex 
+handler 

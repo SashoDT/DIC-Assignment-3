@@ -14,6 +14,10 @@ It is required to setup a environment as stated in the "Environment_Setup.pdf" f
 
 Caution: All command lines may vary from your system, they only serve as examples. 
 
+### Requirements 
+
+Install the requirements in you virtual python environment by using the requirements.txt file. 
+
 ### Starting Localstack 
 
 Start Docker and localstack as stated in the setup file. Alternatively, follow these instructions: 
