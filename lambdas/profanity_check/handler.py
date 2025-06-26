@@ -32,9 +32,6 @@ bad_words = bad_words1.union(bad_words2)
 
 # Create profanity filter 
 def contains_profanity(text):
-    #text = text.translate(str.maketrans("", "", string.punctuation)).lower()
-    #words = text.split()
-    # text is a list of words now
     return any(word in bad_words for word in text)
 
 def handler(event, context):
@@ -95,9 +92,8 @@ def handler(event, context):
             ExpressionAttributeValues={":true": True}
         ).get("Items", [])
         
-        # For some dumb reason, DynamoDB returns Decimal types for numbers, 
-        # so we need to convert them to JSON-compatible types because for 
-        # some dumb reason JSONEncoder does not support those dumb Decimal types.
+        # DynamoDB returns Decimal types for numbers, 
+        # so we need to convert them to JSON-compatible types: 
         from decimal import Decimal
         class DecimalEncoder(json.JSONEncoder):
             def default(self, obj):

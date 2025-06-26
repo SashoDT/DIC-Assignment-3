@@ -31,9 +31,8 @@ sentiment_table = dynamodb.Table(table_name2)
 # Get the bucket names from SSM parameters for result output
 output_bucket = ssm.get_parameter(Name="/dic/output_bucket")["Parameter"]["Value"]
 
-# For some dumb reason, DynamoDB returns Decimal types for numbers, 
-# so we need to convert them to JSON-compatible types because for 
-# some dumb reason JSONEncoder does not support those dumb Decimal types.
+# DynamoDB returns Decimal types for numbers, 
+# so we need to convert them to JSON-compatible types: 
 from decimal import Decimal
 class DecimalEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -98,15 +97,7 @@ def handler(event, context):
                 sentiment = classify_sentiment(full_text, overall_rating)
                 review["sentiment"] = sentiment
                 
-                # Counting sentiment occurrences
-                # sentiment_table.update_item(
-                #             Key={"sentiment": sentiment},
-                #             UpdateExpression="ADD c :one", # used c since "count" and "counter" are reserved words
-                #             ExpressionAttributeValues={":one": 1},
-                #             ReturnValues="UPDATED_NEW"
-                #         )
-
-                # This is a more efficient way to count sentiments
+                # Count sentiments (more efficient than DynamoDB update per review)
                 sentiment_total[sentiment] += 1
 
                 processed_lines.append(json.dumps(review))
@@ -119,7 +110,7 @@ def handler(event, context):
             Body="\n".join(processed_lines).encode("utf-8")
         )
 
-    # Update sentiment counts in DynamoDB (Update per sentiment instead of per review previously)
+    # Update sentiment counts in DynamoDB (Update per sentiment instead of per review as done previously)
     for sentiment, count in sentiment_total.items():
         sentiment_table.update_item(
             Key={"sentiment": sentiment},
