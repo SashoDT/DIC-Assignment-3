@@ -57,7 +57,7 @@ sample_data = (
     "unixReviewTime": 1700000000,
     "reviewTime": "10 25, 2023",
     "category": "Electronics",
-    "expected_review_tokens": ['absolutely', 'worst', 'damn', 'thing', 'ive', 'bought', 'total', 'piece', 'crap', '—', 'slow', 'ugly', 'stupid', 'freaking', 'mess'],
+    "expected_review_tokens": ['absolutely', 'worst', 'damn', 'thing', 'ive', 'bought', 'total', 'piece', 'crap', 'slow', 'ugly', 'stupid', 'freaking', 'mess'],
     "expected_summary_tokens": ['total', 'crap']
 })
 

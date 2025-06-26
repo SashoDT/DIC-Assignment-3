@@ -182,7 +182,7 @@ Additionally, I changed the timeout of the lambda functions from 10 to 120s beca
 
 
 
-# Edit profanity flter 
+# Edit profanity filter 
 
 Next I will try to change the profanity filter to use the python library instead of the txt file. 
 - Problem: package takes much longer to run than txt file 
@@ -238,5 +238,16 @@ Realistically, this could probably be done locally, not on AWS since that would 
 Update: There was no need for a new lambda handler. The count of reviews per sentiment and profanity is done inside of the sentiment lambda. I solved this by using another DynamoDB table which counts the amount of reviews per sentiment. The reason why we use DynamoDB additionally to a simple result counting with a python set, is that DynamoDB remembers the counted sentiments in case multiple files of data get uploaded. Additionally, we read in the DynamoDB table of the user bans and return all this information to a new file inside of the output bucket. 
 
 
+
+############################################################################
+Bug Fixing 
+############################################################################
+
+- Bug: localstack started, ran setup file, uploaded data to input bucket - but the processes does not start: 
+  - Solution: restart localstack and just do the same thing again 
+- Bug: uploaded review, localstack finished work but less than 3 files in the ouput-bucket: 
+  - Solution: Check if the last lambda process in localstack was sentiment analysis and/or if the runtime is a round number, e.g. 
+              180000 ms. If it is a round number than all the max runtime for that one process is used -> increase "timeout" in 
+              "setup.ps1" file for that one lambda.  
 
 
