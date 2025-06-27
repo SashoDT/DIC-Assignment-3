@@ -57,8 +57,8 @@ def get_total_profane_and_banned():
         
     return  profane_total, ban_total
 
+# Returns 'positive', 'neutral', or 'negative' based on compound score
 def classify_sentiment(text, rating):
-    """Returns 'positive', 'neutral', or 'negative' based on compound score."""
     score = analyzer.polarity_scores(text)["compound"]
     score += (rating-3)/2
     if score >= 0.05:
@@ -70,6 +70,7 @@ def classify_sentiment(text, rating):
 
 def handler(event, context):
     for record in event["Records"]:
+        # Get file from S3 event trigger
         bucket = record["s3"]["bucket"]["name"]
         key = record["s3"]["object"]["key"]
 
@@ -81,7 +82,7 @@ def handler(event, context):
         # For counting the sentiment of reviews
         sentiment_total = {"positive": 0, "neutral": 0, "negative": 0}
 
-        # Use the *original text* for sentiment scoring
+        # Process line by line
         for line in raw_data.strip().splitlines():
             if not line.strip():
                 continue
@@ -94,6 +95,7 @@ def handler(event, context):
                 overall_rating = review.get("overall", 3.0) # if no rating, then 3
                 full_text = f"{summary_text}. {review_text}".strip()
 
+                # Classify Sentiment
                 sentiment = classify_sentiment(full_text, overall_rating)
                 review["sentiment"] = sentiment
                 
@@ -104,6 +106,7 @@ def handler(event, context):
             except json.JSONDecodeError:
                 continue  # Skip malformed lines
 
+        # Save processed reviews with sentiment tags
         s3.put_object(
             Bucket=output_bucket,
             Key=key,
@@ -139,5 +142,5 @@ def handler(event, context):
             Body=count_json,
             ContentType="application/json"
         )
-
+    # Return response
     return {"status": "OK"}

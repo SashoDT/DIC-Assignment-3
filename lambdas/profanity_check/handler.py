@@ -2,9 +2,9 @@ import os
 import json
 import boto3
 
+# Load the file paths
 BAD_WORDS_FILE_1 = os.path.join(os.path.dirname(__file__), "bad-words.txt")
 BAD_WORDS_FILE_2 = os.path.join(os.path.dirname(__file__), "badwords_profanityfilter.txt")
-
 
 # Set up AWS clients with LocalStack endpoint
 endpoint_url = os.environ.get("AWS_ENDPOINT_URL") or ("http://" + os.environ.get("LOCALSTACK_HOSTNAME", "localhost") + ":4566")
@@ -28,6 +28,7 @@ with open(BAD_WORDS_FILE_1, "r", encoding="utf-8") as f:
 with open(BAD_WORDS_FILE_2, "r", encoding="utf-8") as f:
     bad_words2 = set(line.strip().lower() for line in f if line.strip())
 
+# Combine the dictionaries
 bad_words = bad_words1.union(bad_words2)
 
 # Create profanity filter 
@@ -36,15 +37,17 @@ def contains_profanity(text):
 
 def handler(event, context):
     for record in event["Records"]:
+        # Get S3 bucket and key from the event
         bucket = record["s3"]["bucket"]["name"]
         key = record["s3"]["object"]["key"]
 
+        # Read the raw file
         obj = s3.get_object(Bucket=bucket, Key=key)
         raw_data = obj["Body"].read().decode("utf-8")
 
         processed_lines = []
 
-        # Check profanity in each relevant field
+        # Check profanity line by line
         for line in raw_data.strip().splitlines():
             if not line.strip():
                 continue
@@ -52,6 +55,7 @@ def handler(event, context):
                 review = json.loads(line)
                 flagged = False
                 reviewer_id = review.get('reviewerID', 'unknown')
+                # Check the relevant fields
                 for field in ["reviewText", "summary"]: 
                     tokens = review.get(field, [])
                     if isinstance(tokens, list) and contains_profanity(tokens):
@@ -73,10 +77,11 @@ def handler(event, context):
                                 ExpressionAttributeValues={":true": True}
                             )
                         break
+                # Add the correct flag to the review
                 review["has_profanity"] = flagged
                 processed_lines.append(json.dumps(review))
             except json.JSONDecodeError:
-                continue  # Skip bad lines
+                continue
 
         # Put result in next bucket
         s3.put_object(
@@ -102,6 +107,7 @@ def handler(event, context):
                     return int(obj) if obj % 1 == 0 else float(obj)
                 return super(DecimalEncoder, self).default(obj)
 
+        # Save the banned user list to S3
         banned_json = "\n".join(json.dumps(user, cls=DecimalEncoder) for user in banned_users).encode("utf-8")
         s3.put_object(
             Bucket=output_bucket,
@@ -111,5 +117,6 @@ def handler(event, context):
         )
         print(f"Wrote banned-users.json with {len(banned_users)} users.")
 
+    # Return a response
     return {"status": "OK"}
 
