@@ -6,7 +6,7 @@ Kotala Jakub (12305828)
 Le Johannes (11918056) 
 Tashkov Alexander (12123661)**
 
-This repository contains the solution to Assignment 3 of **group 7** of the lecture Data-Intensive Computing. All tasks were done in Windows using the *Windows PowerShell* framework.  
+This repository contains the solution to Assignment 3 of **group 7** of the lecture Data-Intensive Computing. All tasks were done in Windows using the *Windows PowerShell* framework. Therefore, to be able to run this, Windows Powershell is required.  
 
 ## How to run this repository 
 
